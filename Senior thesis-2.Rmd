@@ -7,9 +7,6 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_knit$set(root.dir = 'C:/Users/ema30/Desktop/FRAP2020')
-setwd("C:/Users/ema30/Desktop/FRAP2020")
-rm(list=ls())
 library(tidyverse)
 library(janitor)
 library(dplyr)
@@ -390,6 +387,9 @@ summary(glm8)
 
 glm9 <- glm(neighbor ~ enso + upwell + location, data=glm_data, family= "binomial")
 summary(glm9) #upwelling happening and location naples significant predictors of neighbor events 
+
+glm10 <- glmer(neighbor ~ year + season + (1|filename), data=glm_data, family="binomial")
+
 
 #test if data fit model assumptions 
 #install.packages("DHARMa")
