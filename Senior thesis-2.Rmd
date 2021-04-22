@@ -383,12 +383,13 @@ summary(glm6)
 glm7 <- glm(neighbor ~ year + season + location, data=glm_data, family="binomial")
 summary(glm7) #lower AIC than glm6 or glm8, so better model
 glm8 <- glmer(neighbor ~ (1|enso) + (1|upwell) + (1|location), data=glm_data, family="binomial" )
-summary(glm8)
+summary(glm8) # not useful 
 
-glm9 <- glm(neighbor ~ enso + upwell + location, data=glm_data, family= "binomial")
+glm_data$filename<- as.numeric(glm_data$filename)
+glm9 <- glm(neighbor ~ enso + upwell + location + (1|filename) , data=glm_data, family= "binomial")
 summary(glm9) #upwelling happening and location naples significant predictors of neighbor events 
 
-glm10 <- glmer(neighbor ~ year + season + (1|filename), data=glm_data, family="binomial")
+glm10 <- glmer(neighbor ~ year + season , data=glm_data, family="binomial")
 
 
 #test if data fit model assumptions 
