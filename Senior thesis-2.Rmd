@@ -1,0 +1,448 @@
+---
+title: "Senior thesis"
+author: "Ellyse"
+date: "3/3/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = 'C:/Users/ema30/Desktop/FRAP2020')
+setwd("C:/Users/ema30/Desktop/FRAP2020")
+rm(list=ls())
+library(tidyverse)
+library(janitor)
+library(dplyr)
+```
+
+```{r}
+#read in data
+data <- read.csv("mohawk and naples data.csv")
+str(data)
+#tidy data 
+data_tidy <- data %>%
+  pivot_longer(`Neighbor.1`:`Neighbor.Extra`) %>% #make each neighbor observation a row
+  clean_names() %>% #simplify column names
+  mutate(name = str_to_lower(name), already_counted = str_to_lower(already_counted)) #make values in "name" and "already counted?" columns lowercase
+#View(data_tidy)
+
+data_tidier <- data_tidy %>% 
+  mutate(already_counted=replace(already_counted, already_counted=="no", "NA")) %>% #replace "no" values with NA
+  separate(already_counted, c("already_counted_1", "already_counted_2"), "and ") %>% #separate "already counted" values with 2 duplicate observations
+  separate(already_counted_1, c("already_counted_1", "already_counted_3","already_counted_4"), ", ") %>% #separate "already counted" values with 3-4 duplicate observations
+  mutate(already_counted_2=ifelse(is.na(already_counted_2)==TRUE, "NA", paste0("neighbor ", already_counted_2)),
+         already_counted_3=ifelse(is.na(already_counted_3)==TRUE, "NA", paste0("neighbor ", already_counted_3)),
+         already_counted_4=ifelse(already_counted_4>0, paste0("neighbor ", already_counted_4), "NA")) %>% #add "neighbor" before each cell containing a viable value
+  mutate(already_counted_4=replace_na(already_counted_4, "NA")) %>% #replace implicit NA values with explicit NA values (for filtering)
+  filter((already_counted_1!=name)&(already_counted_2!=name)&(already_counted_3!=name)&(already_counted_4!=name)) %>% #remove duplicate observations
+  filter(value!="N/A") %>% #remove neighbor observations of "NA"
+  mutate(focal = tolower(focal))
+#View(data_tidier)
+unique(data_tidier$already_counted_1)
+
+#fixing missspellings 
+data_tidier[data_tidier == "neighor 1"] <- "neighbor 1"
+data_tidier[data_tidier == "neigbor 1"] <- "neighbor 1"
+data_tidier[data_tidier == "neighbor 1 "] <- "neighbor 1"
+data_tidier[data_tidier == "neghbor 1"] <- "neighbor 1"
+data_tidier[data_tidier == "niehgbor 1 "] <- "neighbor 1"
+data_tidier[data_tidier == "neighbor 2 "] <- "neighbor 2"
+data_tidier[data_tidier == "neighbor 3 "] <- "neighbor 3"
+data_tidier[data_tidier == "nrighbor 1"] <- "neighbor 1"
+unique(data_tidier$already_counted_1)
+```
+
+Replace shorthand with scientific names
+```{r}
+sci_name <- read_csv("name key .csv") %>%
+  clean_names() %>% 
+  mutate(scientific_name = tolower(scientific_name))
+#View(sci_name)
+
+data_tidier <- data_tidier %>% 
+ rename(shorthand = value) %>% #rename value column to shorthand, for consistency between data frames
+  filter(shorthand != "same organism") %>% #remove observations where the neighbor organism is the same as the focal organsim
+  mutate(shorthand = ifelse(shorthand=="point occurance corynactis neighbor", "coca", shorthand)) #simplify observed point occurance of corynactis to corynactis
+
+data_name <- merge(data_tidier, sci_name, by='shorthand', all.x=TRUE)
+#View(data_name)
+
+#sort(unique(data_tidier$shorthand))
+#fix inconsistencies in spelling
+data_tidier[data_tidier == "same organisms"] <- "same organism"
+data_tidier[data_tidier == "barob"] <- "baro"
+data_tidier[data_tidier == "csauu"] <- "csau"
+data_tidier[data_tidier == "hso"] <- "hsou"
+data_tidier[data_tidier == "ndshs"] <- "ndsh"
+data_tidier[data_tidier == "obsp"] <- "ob"
+data_tidier[data_tidier == "plsp"] <- "pl"
+data_tidier[data_tidier == "same"] <- "same organism"
+data_tidier[data_tidier == "uteq"] <- "ureq"
+data_tidier[data_tidier == "yesp"] <- "yes"
+
+#sort(unique(data_tidier$shorthand))
+```
+
+El nino years 2015- 2016 
+```{r}
+#creating a column in data_name for el nino event called enso using dataset column 
+data_name$enso <- data_name$dataset
+
+#replacing dates March 2015-June 2016 with 1 and all other times with 0
+#adding year column 
+library(stringr)
+data_name$year <- str_extract(data_name$dataset, "2013|2014|2015|2016|2017|2018")
+sort(unique(data_name$year))
+#adding month column 
+data_name$season <- str_extract(data_name$dataset, "Jan|Feb|May|June|July|Aug|Oct|Nov|Dec")
+sort(unique(data_name$season))
+
+data_name$enso1 <- ifelse(data_name$year=="2015", 
+                      ifelse(data_name$season=="May"| data_name$season=="June"|data_name$season=="July"|data_name$season=="Aug"|data_name$season=="Oct"|data_name$season=="Nov"|data_name$season=="Dec",1,0),0)
+
+data_name$enso2 <- ifelse(data_name$year=="2016", 
+                      ifelse(data_name$season=="Jan"| data_name$season=="Feb"|data_name$season=="May"|data_name$season=="June",1,0),0)
+#combine if else statements into one column called enso
+data_name$enso <- ifelse(data_name$enso1==1|data_name$enso2==1, 1, 0)
+#View(data_name)
+```
+
+Seasons
+```{r}
+#create column in data_name called upwell using dataset column 
+data_name$upwell <- data_name$dataset
+#replace summer months april-aug (upwelling) with yes and winter months sept-march with no
+data_name$upwell[grep("May|June|July|Aug", data_name$upwell)] <- "yes"
+data_name$upwell[grep("Jan|Feb|Oct|Nov|Dec", data_name$upwell)] <- "no"
+#View(data_name)
+```
+
+.....................................................................
+Start of chi square data 
+
+Total neighbor events between coca and urchin in naples and mohawk 
+```{r}
+#quantify number of times focal= coca and scientific_name= mefr or stpu when location= mohawk
+neighbor_mohawk_stpu <- filter(data_name, (focal=="corynactis" & location=="Mohawk" & scientific_name=="echinodermata- strongylocentrotus purpuratus"))
+neighbor_mohawk_mefr <- filter(data_name, (focal=="corynactis" & location=="Mohawk" & scientific_name=="echinodermata- mesocentrotus franciscanus"))
+#counting the rows in each data frame 
+Ms <- nrow(neighbor_mohawk_stpu)
+Mm <- nrow(neighbor_mohawk_mefr)
+#total number of interactions bewteen coca and urchins at mohawk 
+total_int_M <- Ms+Mm #26 
+
+#standardizing interaction by number of photos
+photo_mohawk <- sum(data_name$location == "Mohawk")#3623 assign value if more data added 
+total_int_M/photo_mohawk #0.007176373 interaction event per Mohawk photo 
+
+```
+
+
+```{r}
+#quantify number of times focal= coca and scientific_name= mefr or stpu when location= naples
+neighbor_naples_stpu <- filter(data_name, (focal=="corynactis" & location=="Naples" & scientific_name=="echinodermata- strongylocentrotus purpuratus"))
+neighbor_naples_mefr <- filter(data_name, (focal=="corynactis" & location=="Naples" & scientific_name=="echinodermata- mesocentrotus franciscanus"))
+#counting the rows in each data frame 
+Ns <- nrow(neighbor_naples_stpu)
+Nm <- nrow(neighbor_naples_mefr)
+#total number of interactions bewteen coca and urchins at naples 
+total_int_N <- Ns+Nm #186
+
+#standardizing interaction by number of photos
+photo_naples <- sum(data_name$location == "Naples") #10012
+total_int_N/photo_naples #0.01857771 interaction events per Naples photo
+
+#what test to use to compare interaction events at two locations? 
+```
+
+Counting interaction events during enso vs not 
+```{r}
+#quantify number of times focal= coca and scientific_name= mefr or stpu when enso= yes 
+neighbor_enso_stpu <- filter(data_name, (focal=="corynactis" & scientific_name=="echinodermata- strongylocentrotus purpuratus" & enso=="yes"))
+neighbor_enso_mefr <- filter(data_name, (focal=="corynactis" & scientific_name=="echinodermata- mesocentrotus franciscanus" & enso=="yes"))
+#counting the rows in each data frame 
+Es <- nrow(neighbor_enso_stpu)
+Em <- nrow(neighbor_enso_mefr)
+#total number of interactions bewteen coca and urchins during enso  
+total_int <- Es+Em #81
+
+#standardizing interaction by number of photos
+enso_yes <- sum(data_name$enso == "yes") #7757
+total_int/enso_yes #0.01044218 interaction events per photo during enso year 
+
+```
+
+```{r}
+#quantify number of times focal= coca and scientific_name= mefr or stpu when enso= no
+neighbor_ne_stpu <- filter(data_name, (focal=="corynactis" & scientific_name=="echinodermata- strongylocentrotus purpuratus" & enso=="no"))
+neighbor_ne_mefr <- filter(data_name, (focal=="corynactis" & scientific_name=="echinodermata- mesocentrotus franciscanus" & enso=="no"))
+#counting the rows in each data frame 
+Nes <- nrow(neighbor_ne_stpu)
+Nem <- nrow(neighbor_ne_mefr)
+#total number of interactions bewteen coca and urchins during no enso  
+total_int <- Nes+Nem #131
+
+#standardizing interaction by number of photos
+enso_no <- sum(data_name$enso == "no") #5878
+total_int/enso_no #0.02228649 interaction events per photo during non enso year 
+
+#standardize these counts by photos looked at in 2015/2016 vs all others? would skew the data too much because two years vs a lot of other years?  
+```
+
+Counting interactions during season 
+```{r}
+#quantify number of times focal= coca and scientific_name= mefr or stpu when upwell= yes 
+neighbor_upwell_stpu <- filter(data_name, (focal=="corynactis" & scientific_name=="echinodermata- strongylocentrotus purpuratus" & upwell=="yes"))
+neighbor_upwell_mefr <- filter(data_name, (focal=="corynactis" & scientific_name=="echinodermata- mesocentrotus franciscanus" & upwell=="yes"))
+#counting the rows in each data frame 
+Us <- nrow(neighbor_upwell_stpu)
+Um <- nrow(neighbor_upwell_mefr)
+#total number of interactions bewteen coca and urchins during upwell 
+total_int <- Us+Um #121
+
+#standardizing interaction by number of photos
+upwell_yes <- sum(data_name$upwell == "yes") #5522
+total_int/upwell_yes #0.02191235 interaction events per photo during upwelling season  
+```
+
+```{r}
+#quantify number of times focal= coca and scientific_name= mefr or stpu when upwell= no
+neighbor_nu_stpu <- filter(data_name, (focal=="corynactis" & scientific_name=="echinodermata- strongylocentrotus purpuratus" & upwell=="no"))
+neighbor_nu_mefr <- filter(data_name, (focal=="corynactis" & scientific_name=="echinodermata- mesocentrotus franciscanus" & upwell=="no"))
+#counting the rows in each data frame 
+Nus <- nrow(neighbor_nu_stpu)
+Num <- nrow(neighbor_nu_mefr)
+#total number of interactions bewteen coca and urchins during upwell 
+total_int <- Nus+Num #91
+
+#standardizing interaction by number of photos
+upwell_no <- sum(data_name$upwell == "no") #8113
+total_int/upwell_no #0.01121657 interaction events per photo during non upwelling season
+```
+
+......................................................................
+
+Chi square test 
+need to determine how many interactions occur btw coca and not an urchin and divide by total pictures taken 
+```{r}
+#counting interactions between coca and not an urchin between naples and mohawk 
+N_coca_other  <- filter(data_name, (focal=="corynactis" & !scientific_name=="echinodermata- strongylocentrotus purpuratus" & !scientific_name=="echinodermata- mesocentrotus franciscanus" & location=="Naples"))
+N <- nrow(N_coca_other) #8427
+
+M_coca_other  <- filter(data_name, (focal=="corynactis" & !scientific_name=="echinodermata- strongylocentrotus purpuratus" & !scientific_name=="echinodermata- mesocentrotus franciscanus" & location=="Mohawk"))
+M <- nrow(M_coca_other) #540
+
+#standardize by total number of photos taken per site 
+N/photo_naples #0.84169
+M/photo_mohawk #0.1490478
+```
+```{r}
+#chi square test naples and mohawk, Naples/Mohawk Interaction/Not interaction. total counts, not standardized by total number of photos taken because would no longer be count data. Still valid? 
+
+chi1 <- matrix(c(26,186,540,8427),nrow=2,ncol=2)
+chisq.test(chi1,correct=FALSE) #p-value= 0.0001881
+```
+
+```{r}
+#counting interactions btw coca and non urchin enso events
+En_coca_other  <- filter(data_name, (focal=="corynactis" & !scientific_name=="echinodermata- strongylocentrotus purpuratus" & !scientific_name=="echinodermata- mesocentrotus franciscanus" & enso=="yes"))
+En <- nrow(En_coca_other) #5794
+
+Nen_coca_other  <- filter(data_name, (focal=="corynactis" & !scientific_name=="echinodermata- strongylocentrotus purpuratus" & !scientific_name=="echinodermata- mesocentrotus franciscanus" & enso=="no"))
+Nen <- nrow(Nen_coca_other) #3173
+
+#chi square
+chi2 <- matrix(c(81,131,5794,3173),nrow=2,ncol=2)
+chisq.test(chi2,correct=FALSE) #p-value = 2.424e-15
+```
+
+```{r}
+#counting interactions btw coca and non urchin season
+U_coca_other  <- filter(data_name, (focal=="corynactis" & !scientific_name=="echinodermata- strongylocentrotus purpuratus" & !scientific_name=="echinodermata- mesocentrotus franciscanus" & upwell=="yes"))
+U <- nrow(U_coca_other) #3398
+
+Nu_coca_other  <- filter(data_name, (focal=="corynactis" & !scientific_name=="echinodermata- strongylocentrotus purpuratus" & !scientific_name=="echinodermata- mesocentrotus franciscanus" & upwell=="no"))
+Nu <- nrow(Nu_coca_other) #5569
+
+#chi square
+chi3 <- matrix(c(121,91,3398,5569),nrow=2,ncol=2)
+chisq.test(chi3,correct=FALSE) #p-value = 1.368e-08
+
+```
+
+
+interaction between season and enso event? 
+chi square code:
+Naples/Mohawk Interaction/Not interaction
+Nap <- c(number, number)
+Ooh <- c(intx, not)
+Chi1 <- chisq.test(nap, ooh) assign a variable 
+make table to check work and table input order 
+chi1$p.value
+
+check that the numbers are correctly used in table
+round(chi1$expected,2)
+residuals 
+round(chi1$residuals, 3)
+plot residuals 
+corrplot(chi1$residuals, is.cor = FALSE)
+
+......................................................................
+
+GLM
+```{r}
+#new data frame to use for glm data
+glm_data <- data.frame(data_name)
+glm_data$upwell[grep("yes", glm_data$upwell)] <- 1
+glm_data$upwell[grep("no", glm_data$upwell)] <- 0
+#View(glm_data)
+
+#ifelse statement to create new column called neighbor. If focal= corynactis and shorthand= mefr or stpu, then this value= 1. If not= 0
+glm_data$neighbor <- ifelse(glm_data$focal=="corynactis", 
+                      ifelse(glm_data$shorthand=="mefr" | glm_data$shorthand=="stpu",1,0),0)
+#View(glm_data)
+sort(unique(glm_data$neighbor))
+length(which(glm_data$neighbor==1)) #212
+
+#check if total number of coca neighbor with urchin is equal to total number urchin neighbor with coca. 
+glm_data$neighbor2 <- ifelse(glm_data$focal=="strongylocentrotus"|glm_data$focal =="mesocentrotus", ifelse(glm_data$shorthand=="coca",1,0),0)
+sort(unique(glm_data$neighbor2))
+length(which(glm_data$neighbor2==1)) #207. Not equal to 212, but close. Difference due to errors when entering data 
+
+
+#new column to standardize neighbor by total number of neighbors of coca when enso event 
+stand_enso  <- filter(glm_data, (focal=="corynactis" & enso== 1))
+E <- nrow(stand_enso) #5943 total neighbors of coca during enso 
+
+#if enso= 1 and neighbor= 1 then divide neighbor interaction by E (the total number of interactions during enso)
+glm_data$stand_enso <- ifelse(glm_data$enso==1 & glm_data$neighbor==1, 1/5943, 0)
+#View(glm_data)
+
+
+
+#if/then function argument. if focal=coca and shorthand= urchin then=1 (otherwise 0) add up the number of ones to get total number interactions 
+# finding denominator= nrow= total number of rows 
+# glmm(percentage~site+year+sitexyear….) Where response is #urchin interactions/#any neighbor
+#  glm(admit ~ gre + rank, data=bindat, family="binomial")
+# mixed model https://stats.stackexchange.com/questions/58900/fixed-vs-random-effects
+#https://stats.stackexchange.com/questions/4700/what-is-the-difference-between-fixed-effect-random-effect-and-mixed-effect-mode
+
+```
+
+```{r}
+#GLM test runs 
+library(car)
+library(MASS)
+library(ggplot2)
+library(psych)
+
+#glm practice models  
+glm1 <- glm(stand_enso ~ year, data=glm_data, family="binomial")
+summary(glm1) 
+
+glm2 <- glm(stand_enso ~ year, data=glm_data)
+summary(glm2) #2015 and 2016 significant 
+
+```
+
+```{r}
+#GLM mixed effects model 
+library(lme4)
+
+glm3 <- glmer(neighbor ~ (1|enso), data=glm_data, family="binomial")
+summary(glm3) #significant 
+```
+```{r}
+#new column to standardize neighbor by total number of neighbors of coca when seasonal upwelling occurring 
+stand_upwell  <- filter(glm_data, (focal=="corynactis" & upwell=="1"))
+U <- nrow(stand_upwell) #3600 total neighbors of coca during upwell
+sum(U)
+
+#if upwell= 1 and neighbor= 1 then divide neighbor interaction by U (the total number of interactions during upwell)
+glm_data$stand_upwell <- ifelse(glm_data$upwell=="1" & glm_data$neighbor=="1", 1/3600, "0")
+#View(glm_data)
+
+```
+
+```{r}
+#GLM mixed effects model for season 
+library(lme4)
+glm_data$stand_upwell <- as.numeric(glm_data$stand_upwell)
+glm4 <- glmer(stand_upwell ~ (1|season), data=glm_data)
+summary(glm4)
+print(glm4)
+ranef(glm4)
+
+#glm for enso and upwell not standardized 
+glm5 <- glmer(neighbor ~ (1|enso) + (1|upwell), data=glm_data, family="binomial" )
+summary(glm5)
+```
+
+```{r}
+#binomial glm for non standardized neighbor events by multiple factors (season, year, location)
+glm_data$neighbor <- as.numeric(glm_data$neighbor)
+glm6 <- glm(neighbor ~ year + season, data=glm_data, family="binomial")
+summary(glm6)
+glm7 <- glm(neighbor ~ year + season + location, data=glm_data, family="binomial")
+summary(glm7) #lower AIC than glm6 or glm8, so better model
+glm8 <- glmer(neighbor ~ (1|enso) + (1|upwell) + (1|location), data=glm_data, family="binomial" )
+summary(glm8)
+
+glm9 <- glm(neighbor ~ enso + upwell + location, data=glm_data, family= "binomial")
+summary(glm9) #upwelling happening and location naples significant predictors of neighbor events 
+
+#test if data fit model assumptions 
+#install.packages("DHARMa")
+library(DHARMa)
+simulationOutput <- simulateResiduals(fittedModel = glm9, plot = T) #gives message to use testOutliers and bootstrap, significant deviation
+
+testOutliers(simulationOutput = glm9, margin = c("both"), type = c("bootstrap"), plot = T) #p value < 0.05 so no overdispersion/outliers
+?testOutliers
+
+#install.packages("performance")
+library(performance)
+#install.packages("see")
+library(see)
+binned_residuals(glm9) #38% model not a great fit 
+testDispersion(glm9)# >0.05, so there is no overdispersion  
+binned_residuals(glm7) #88% of the residuals are inside the error bounds. model is a good fit 
+binned_residuals(glm5) #50% 
+testDispersion(glm5) # >0.05, so there is no overdispersion  
+
+```
+
+```{r}
+#visualizing
+library(car)
+library(MASS)
+library(ggplot2)
+library(psych)
+
+glm_data2 <- subset(glm_data, select = c("year", "neighbor")) 
+glm_data2<−lapply(glm_data2,as.numeric)
+
+write.csv(glm_data2, "glm_data2.csv")
+glm_data2 <- read.csv("glm_data2.csv")
+#View(glm_data2)
+
+#graph that works, stand_enso does not work as y 
+ggplot(glm_data2, aes(x=year, y=neighbor)) + geom_smooth(method = "glm", method.args = list(family = "binomial")) 
+
+
+#next- how to report data, visualizing 
+```
+
+```{r}
+#making results presentable 
+#install.packages("huxtable")
+#install.packages("jtools")
+library(huxtable)
+library(jtools)
+summ(glm5)
+summ(glm9)
+
+library(sjPlot)
+tab_model(glm5)
+tab_model(glm9)
+```
+
