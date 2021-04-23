@@ -414,12 +414,15 @@ testDispersion(glm5) # >0.05, so there is no overdispersion
 
 Amelia's addition - checking out binned residuals
 ```{r}
-glm_all <- glm(neighbor ~ year + season + location + enso + upwell, data=glm_data, family="binomial")
-stepAIC(glm_all, direction="both") #for now, this is saying season and location is most predictive (but also, no random effects accounted for so take this with a grain of salt)
+glm_all <- glm(neighbor ~ year + upwell + season + location + enso, data=glm_data, family="binomial")
+stepAIC(glm_all, direction="backward") #for now, this is saying season and location is most predictive (but also, no random effects accounted for so take this with a grain of salt)
 
-glm_11 <- glm(neighbor ~ season + location, data=glm_data, family="binomial")
+# with model selection, you also want to think of this from a biological standpoint - should we *actually* expect to see differences between "january" and "february", or are we more interested in the "upwelling season" versus the "non upwelling season"?
+glm_11 <- glm(neighbor ~ upwell + location, data=glm_data, family="binomial")
 summary(glm_11)
 
+binned_residuals(glm_11) #75% residuals within error bounds
+testDispersion(glm_11) #good dispersion
 ```
 
 
