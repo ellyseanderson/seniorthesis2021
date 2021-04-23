@@ -420,7 +420,6 @@ library(ggplot2)
 library(psych)
 
 glm_data2 <- subset(glm_data, select = c("year", "neighbor")) 
-glm_data2<−lapply(glm_data2,as.numeric)
 
 write.csv(glm_data2, "glm_data2.csv")
 glm_data2 <- read.csv("glm_data2.csv")
@@ -432,6 +431,32 @@ ggplot(glm_data2, aes(x=year, y=neighbor)) + geom_smooth(method = "glm", method.
 
 #next- how to report data, visualizing 
 ```
+
+Amelia's addition - plot % interactions over time by location
+```{r}
+#create df with total number of rows for each location at each year
+glm_n <- glm_data2 %>%
+  group_by(year, location) %>% 
+  summarize(n=n())
+
+#create df with number of positive (1) interactions for each location at each year
+glm_1 <- glm_data2 %>%
+  group_by(year, location) %>%
+  filter(neighbor=="1") %>% 
+  summarize(sum=sum(neighbor))
+  
+#combine the two df and calculate percentages
+glm_percent <-  merge(glm_1, glm_n, by=c("year", "location")) %>% 
+  mutate(percent = sum/n) #calculate percent interactions
+
+#woohoo! now the data are ready to be plotted
+ggplot(glm_percent, aes(x=year, y=percent, fill=location)) +
+  geom_bar(position="dodge", stat="identity")
+
+#also, here's a nifty function to save ggplots!
+ggsave('figures/amelia-plot.png', width = 4, height = 2.5)
+```
+
 
 ```{r}
 #making results presentable 
