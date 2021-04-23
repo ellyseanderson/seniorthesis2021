@@ -386,10 +386,10 @@ glm8 <- glmer(neighbor ~ (1|enso) + (1|upwell) + (1|location), data=glm_data, fa
 summary(glm8) # not useful 
 
 glm_data$filename<- as.numeric(glm_data$filename)
-glm9 <- glm(neighbor ~ enso + upwell + location + (1|filename) , data=glm_data, family= "binomial")
+glm9 <- glmer(neighbor ~ enso + upwell + location + (1|filename) , data=glm_data, family= "binomial")
 summary(glm9) #upwelling happening and location naples significant predictors of neighbor events 
 
-glm10 <- glmer(neighbor ~ year + season , data=glm_data, family="binomial")
+glm10 <- glm(neighbor ~ year + season , data=glm_data, family="binomial")
 
 
 #test if data fit model assumptions 
@@ -411,6 +411,18 @@ binned_residuals(glm5) #50%
 testDispersion(glm5) # >0.05, so there is no overdispersion  
 
 ```
+
+Amelia's addition - checking out binned residuals
+```{r}
+glm_all <- glm(neighbor ~ year + season + location + enso + upwell, data=glm_data, family="binomial")
+stepAIC(glm_all, direction="both") #for now, this is saying season and location is most predictive (but also, no random effects accounted for so take this with a grain of salt)
+
+glm_11 <- glm(neighbor ~ season + location, data=glm_data, family="binomial")
+summary(glm_11)
+
+```
+
+
 
 ```{r}
 #visualizing
@@ -437,13 +449,15 @@ Amelia's addition - plot % interactions over time by location
 #create df with total number of rows for each location at each year
 glm_n <- glm_data2 %>%
   group_by(year, location) %>% 
-  summarize(n=n())
+  summarize(n=n()) %>% 
+  ungroup()
 
 #create df with number of positive (1) interactions for each location at each year
 glm_1 <- glm_data2 %>%
   group_by(year, location) %>%
   filter(neighbor=="1") %>% 
-  summarize(sum=sum(neighbor))
+  summarize(sum=sum(neighbor)) %>% 
+  ungroup()
   
 #combine the two df and calculate percentages
 glm_percent <-  merge(glm_1, glm_n, by=c("year", "location")) %>% 
