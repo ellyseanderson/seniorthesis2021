@@ -294,17 +294,16 @@ glm_data$upwell[grep("yes", glm_data$upwell)] <- 1
 glm_data$upwell[grep("no", glm_data$upwell)] <- 0
 #View(glm_data)
 
-#ifelse statement to create new column called neighbor. If focal= corynactis and shorthand= mefr or stpu, then this value= 1. If not= 0
-glm_data$neighbor <- ifelse(glm_data$focal=="corynactis", 
+#ifelse statement to create new column called neighbor for whenever coca and urchin are next to each other
+glm_data$neighbor1 <- ifelse(glm_data$focal=="corynactis", 
                       ifelse(glm_data$shorthand=="mefr" | glm_data$shorthand=="stpu",1,0),0)
-#View(glm_data)
-sort(unique(glm_data$neighbor))
-length(which(glm_data$neighbor==1)) #212
 
-#check if total number of coca neighbor with urchin is equal to total number urchin neighbor with coca. 
-glm_data$neighbor2 <- ifelse(glm_data$focal=="strongylocentrotus"|glm_data$focal =="mesocentrotus", ifelse(glm_data$shorthand=="coca",1,0),0)
-sort(unique(glm_data$neighbor2))
-length(which(glm_data$neighbor2==1)) #207. Not equal to 212, but close. Difference due to errors when entering data 
+glm_data$neighbor2 <- ifelse(glm_data$focal=="mesocentrotus" | glm_data$focal=="strongylocentotus", ifelse(glm_data$shorthand=="coca",1,0),0)
+
+glm_data$neighbor <- ifelse(glm_data$neighbor1==1 | glm_data$neighbor2==1,1,0)
+
+length(which(glm_data$neighbor==1)) #390  
+#View(glm_data)
 
 
 #new column to standardize neighbor by total number of neighbors of coca when enso event 
@@ -313,7 +312,7 @@ E <- nrow(stand_enso) #5943 total neighbors of coca during enso
 
 #if enso= 1 and neighbor= 1 then divide neighbor interaction by E (the total number of interactions during enso)
 glm_data$stand_enso <- ifelse(glm_data$enso==1 & glm_data$neighbor==1, 1/5943, 0)
-#View(glm_data)
+View(glm_data)
 
 
 
@@ -332,23 +331,15 @@ library(car)
 library(MASS)
 library(ggplot2)
 library(psych)
-
-#glm practice models  
-glm1 <- glm(stand_enso ~ year, data=glm_data, family="binomial")
-summary(glm1) 
-
-glm2 <- glm(stand_enso ~ year, data=glm_data)
-summary(glm2) #2015 and 2016 significant 
-
-```
-
-```{r}
 #GLM mixed effects model 
 library(lme4)
 
-glm3 <- glmer(neighbor ~ (1|enso), data=glm_data, family="binomial")
-summary(glm3) #significant 
+#glm practice models
+glm1 <- glm(stand_enso ~ year, data=glm_data)
+summary(glm1) #2015 and 2016 significant 
+
 ```
+
 ```{r}
 #new column to standardize neighbor by total number of neighbors of coca when seasonal upwelling occurring 
 stand_upwell  <- filter(glm_data, (focal=="corynactis" & upwell=="1"))
@@ -362,57 +353,41 @@ glm_data$stand_upwell <- ifelse(glm_data$upwell=="1" & glm_data$neighbor=="1", 1
 ```
 
 ```{r}
-#GLM mixed effects model for season 
-library(lme4)
-glm_data$stand_upwell <- as.numeric(glm_data$stand_upwell)
-glm4 <- glmer(stand_upwell ~ (1|season), data=glm_data)
-summary(glm4)
-print(glm4)
-ranef(glm4)
-
-#glm for enso and upwell not standardized 
-glm5 <- glmer(neighbor ~ (1|enso) + (1|upwell), data=glm_data, family="binomial" )
-summary(glm5)
-```
-
-```{r}
 #binomial glm for non standardized neighbor events by multiple factors (season, year, location)
 glm_data$neighbor <- as.factor(glm_data$neighbor) #not numeric because this is a category, yes/no
-glm6 <- glm(neighbor ~ year + season, data=glm_data, family="binomial")
-summary(glm6)
-glm7 <- glm(neighbor ~ year + season + location, data=glm_data, family="binomial")
-summary(glm7) #lower AIC than glm6 or glm8, so better model
-glm8 <- glmer(neighbor ~ (1|enso) + (1|upwell) + (1|location), data=glm_data, family="binomial" )
-summary(glm8) # not useful 
+glm2 <- glm(neighbor ~ year + season, data=glm_data, family="binomial")
+summary(glm2)
+glm3 <- glm(neighbor ~ enso + upwell + location, data=glm_data, family="binomial")
+summary(glm3)  #enso and location significant predictors 
 
+#previously glm9
 glm_data$filename<- as.factor(glm_data$filename)
-glm9 <- glmer(neighbor ~ enso + upwell + location + (1|filename) , data=glm_data, family= "binomial")
-summary(glm9) #upwelling happening and location naples significant predictors of neighbor events 
+glm4 <- glmer(neighbor ~ enso + upwell + location + (1|filename) , data=glm_data, family= "binomial")
+summary(glm4) #location naples significant predictors of neighbor events 
 
-glm10 <- glm(neighbor ~ year + season , data=glm_data, family="binomial")
-
+#previously glm10
+glm5 <- glmer(neighbor ~ location + (1|filename), data=glm_data, family="binomial")
+summary(glm5) #includes only independent variable that is significant predictors of the model
 
 #test if data fit model assumptions 
 #install.packages("DHARMa")
 library(DHARMa)
-simulationOutput <- simulateResiduals(fittedModel = glm9, plot = T) #gives message to use testOutliers and bootstrap, significant deviation
+simulationOutput <- simulateResiduals(fittedModel = glm5, plot = T) #gives message to use testOutliers and bootstrap, significant deviation
 
-testOutliers(simulationOutput = glm9, margin = c("both"), type = c("bootstrap"), plot = T) #p value < 0.05 so no overdispersion/outliers
+testOutliers(simulationOutput = glm5, margin = c("both"), type = c("bootstrap"), plot = T) #p value < 0.05 so no overdispersion/outliers
 ?testOutliers
 
 #install.packages("performance")
 library(performance)
 #install.packages("see")
 library(see)
-binned_residuals(glm9) #38% model not a great fit 
-testDispersion(glm9)# >0.05, so there is no overdispersion  
-binned_residuals(glm7) #88% of the residuals are inside the error bounds. model is a good fit 
-binned_residuals(glm5) #50% 
+binned_residuals(glm4) #31% model not a great fit 
+testDispersion(glm4)# >0.05, so there is no overdispersion  
+binned_residuals(glm5) #32% of the residuals are inside the error bounds. model is a not a good fit  
 testDispersion(glm5) # >0.05, so there is no overdispersion  
-
 ```
 
-Amelia's addition - checking out binned residuals, adding random effects
+Amelia's addition - checking out binned residuals
 ```{r}
 glm_all <- glmer(neighbor ~ year + upwell + season + location + enso, data=glm_data, family="binomial")
 stepAIC(glm_all, direction="both") #for now, this is saying season and location is most predictive (but also, no random effects accounted for becaues stepAIC() can't handle those so take this with a grain of salt)
@@ -442,21 +417,18 @@ glm_data2 <- read.csv("glm_data2.csv")
 
 #graph that works, stand_enso does not work as y 
 ggplot(glm_data2, aes(x=year, y=neighbor)) + geom_smooth(method = "glm", method.args = list(family = "binomial")) 
-
-
-#next- how to report data, visualizing 
 ```
 
 Amelia's addition - plot % interactions over time by location
 ```{r}
 #create df with total number of rows for each location at each year
-glm_n <- glm_data2 %>%
+glm_n <- glm_data %>%
   group_by(year, location) %>% 
   summarize(n=n()) %>% 
   ungroup()
 
 #create df with number of positive (1) interactions for each location at each year
-glm_1 <- glm_data2 %>%
+glm_1 <- glm_data %>%
   group_by(year, location) %>%
   filter(neighbor=="1") %>% 
   summarize(sum=sum(neighbor)) %>% 
@@ -488,4 +460,3 @@ library(sjPlot)
 tab_model(glm5)
 tab_model(glm9)
 ```
-
