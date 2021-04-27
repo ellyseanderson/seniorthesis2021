@@ -438,9 +438,13 @@ glm_1 <- glm_data %>%
 glm_percent <-  merge(glm_1, glm_n, by=c("year", "location")) %>% 
   mutate(percent = sum/n) #calculate percent interactions
 
+#standard dev and error to make error bars 
+SD <- sd(glm_percent$percent)
+SE = sd(glm_percent$percent)/sqrt(length(glm_percent$percent))
+
 #woohoo! now the data are ready to be plotted
 ggplot(glm_percent, aes(x=year, y=percent, fill=location)) +
-  geom_bar(position="dodge", stat="identity")
+  geom_bar(position="dodge", stat="identity")+ geom_errorbar(aes(x=year, ymin=percent-SE, ymax=percent+SE),width=0.4) #error bars weird
 
 #also, here's a nifty function to save ggplots!
 ggsave('figures/amelia-plot.png', width = 4, height = 2.5)
@@ -459,4 +463,9 @@ summ(glm9)
 library(sjPlot)
 tab_model(glm5)
 tab_model(glm9)
+```
+
+
+```{r}
+#next: error bars, figure out github pull/push issues
 ```
