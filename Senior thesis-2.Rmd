@@ -401,7 +401,6 @@ testDispersion(glm_11) #good dispersion
 ```
 
 
-
 ```{r}
 #visualizing
 library(car)
@@ -454,6 +453,31 @@ ggplot(glm_percent, aes(x=year, y=percent, fill=location)) +
 
 #also, here's a nifty function to save ggplots!
 ggsave('figures/amelia-plot.png', width = 4, height = 2.5)
+View(glm_percent)
+```
+
+Plot % intereactions by month
+```{r}
+#create df with total number of rows for each location at each year
+glm_n <- glm_data %>%
+  group_by(season, location) %>% 
+  summarize(n=n()) %>% 
+  ungroup()
+
+#create df with number of positive (1) interactions for each location at each year
+glm_1 <- glm_data %>%
+  group_by(season, location) %>%
+  filter(neighbor=="1") %>% 
+  summarize(sum=sum(neighbor)) %>% 
+  ungroup()
+  
+#combine the two df and calculate percentages
+glm_percent2 <-  merge(glm_1, glm_n, by=c("season", "location")) %>% 
+  mutate(percent = sum/n) #calculate percent interactions
+
+#woohoo! now the data are ready to be plotted
+ggplot(glm_percent, aes(x=season, y=percent, fill=location)) +
+  geom_bar(position="dodge", stat="identity")
 ```
 
 
@@ -471,7 +495,3 @@ tab_model(glm4)#this table is a good way to summarize the significant predeictor
 tab_model(glm5)
 ```
 
-
-```{r}
-#next: error bars- how to get different ones for each bar 
-```
