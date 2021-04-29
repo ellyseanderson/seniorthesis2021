@@ -287,6 +287,17 @@ corrplot(chi1$residuals, is.cor = FALSE)
 ......................................................................
 
 GLM
+test for normality
+```{r}
+library(car)
+library(multcomp)
+fit <- aov(neighbor~enso*upwell, data=glm_data)
+par(mfrow=c(2,2)) 
+plot(fit) 
+res=fit$residuals
+qqPlot(res) #not normal-> need non-parametric test
+```
+
 ```{r}
 #new data frame to use for glm data
 glm_data <- data.frame(data_name)
