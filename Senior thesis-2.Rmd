@@ -291,7 +291,7 @@ test for normality
 ```{r}
 library(car)
 library(multcomp)
-fit <- aov(neighbor~enso*upwell, data=glm_data)
+fit <- aov(neighbor~upwell*enso, data=glm_data)
 par(mfrow=c(2,2)) 
 plot(fit) 
 res=fit$residuals
@@ -313,8 +313,9 @@ glm_data$neighbor2 <- ifelse(glm_data$focal=="mesocentrotus" | glm_data$focal=="
 
 glm_data$neighbor <- ifelse(glm_data$neighbor1==1 | glm_data$neighbor2==1,1,0)
 
-length(which(glm_data$neighbor==1)) #390  
-#View(glm_data)
+#remove 2018
+glm_data <- glm_data[!grepl('2018', glm_data$year),]
+length(which(glm_data$neighbor==1)) #381  
 
 
 #new column to standardize neighbor by total number of neighbors of coca when enso event 
@@ -443,24 +444,28 @@ glm_1 <- glm_data %>%
   filter(neighbor=="1") %>% 
   summarize(sum=sum(neighbor)) %>% 
   ungroup()
-  
+
 #combine the two df and calculate percentages
 glm_percent <-  merge(glm_1, glm_n, by=c("year", "location")) %>% 
   mutate(percent = sum/n) #calculate percent interactions
 
-#standard dev and error to make error bars 
-SD = sd(glm_percent$percent)
-SE = sd(glm_percent$percent)/sqrt(length(glm_percent$percent))
-
-glm_percent$sd <- sd(glm_percent$percent)
-glm_percent$se <- sd(glm_percent$percent)/sqrt(length(glm_percent$percent))
 #View(glm_percent)
+
+
+glm_sd <- glm_data %>%
+  group_by(year, location) %>%
+  summarize(sd=sd(neighbor)) %>% 
+  ungroup()
+
+glm_3 <-  merge(glm_percent, glm_sd, by=c("year", "location"))
+#merge glm_percent and glm_sd by "year" and "location" in new data frame 
+View(glm_3)
 
 pd <- position_dodge(0.9) 
 
 #woohoo! now the data are ready to be plotted
-ggplot(glm_percent, aes(x=year, y=percent, fill=location)) +
-  geom_bar(position="dodge", stat="identity")+ geom_errorbar(aes(x=year, ymin=percent-SE, ymax=percent+SE),width=0.4, position=pd) #error bars all the same size? 
+ggplot(glm_3, aes(x=year, y=percent, fill=location)) +
+  geom_bar(position="dodge", stat="identity")
 
 #also, here's a nifty function to save ggplots!
 ggsave('figures/amelia-plot.png', width = 4, height = 2.5)
@@ -504,5 +509,21 @@ summ(glm5)
 library(sjPlot)
 tab_model(glm4)#this table is a good way to summarize the significant predeictors of the model 
 tab_model(glm5)
+```
+```{r}
+citation()
+
+```
+```{r}
+#tukey test 
+#https://rpubs.com/aaronsc32/post-hoc-analysis-tukey
+#neighbor and location, can be graphically displayed 
+# for ggplot geom_text(aes(label=c("B", "AB", "AB", "A")), hjust=-1, size=5)
+glm5.lm <- lm(neighbor ~ location*year, data = glm_data)
+glm5.av <- aov(glm5.lm)
+tukey.test <- TukeyHSD(glm5.av)
+tukey.test
+plot(tukey.test)
+
 ```
 
