@@ -515,15 +515,25 @@ citation()
 
 ```
 ```{r}
-#tukey test 
+#tukey test
 #https://rpubs.com/aaronsc32/post-hoc-analysis-tukey
 #neighbor and location, can be graphically displayed 
 # for ggplot geom_text(aes(label=c("B", "AB", "AB", "A")), hjust=-1, size=5)
-glm5.lm <- lm(neighbor ~ location*year, data = glm_data)
-glm5.av <- aov(glm5.lm)
-tukey.test <- TukeyHSD(glm5.av)
-tukey.test
-plot(tukey.test)
+
+library(multcomp)
+glm5.av <- aov(neighbor ~ year*location, data = glm_data)
+TukeyHSD(glm5.av) #gives the p adj values 
+Post_hoc <- glht(glm5.av, linfct = mcp(year*location = "Tukey")) #error message
+confint(Post_hoc)
+cld(Post_hoc)
+plot(Post_hoc, main = "Fig 1: 95% confidence level",cex.axis = .25)
+#cant get the letters 
+
+years1 <- c(2013, 2014, 2015, 2016, 2017) #naples and mohawk tukey test for each year ie. Mohawk 2013 - Naples 2013 
+p.value <- c(.0049236, 0, .0993233, .0080932, .632362)
+df <- data.frame(years1, p.value)
+ggplot(df, aes(x=years1, y=p.value)) +
+  geom_bar(position="dodge", stat="identity")
 
 ```
 
