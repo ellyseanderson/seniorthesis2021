@@ -520,20 +520,19 @@ citation()
 #neighbor and location, can be graphically displayed 
 # for ggplot geom_text(aes(label=c("B", "AB", "AB", "A")), hjust=-1, size=5)
 
-library(multcomp)
-glm5.av <- aov(neighbor ~ year*location, data = glm_data)
-TukeyHSD(glm5.av) #gives the p adj values 
-Post_hoc <- glht(glm5.av, linfct = mcp(year*location = "Tukey")) #error message
-confint(Post_hoc)
-cld(Post_hoc)
-plot(Post_hoc, main = "Fig 1: 95% confidence level",cex.axis = .25)
-#cant get the letters 
+#can't run this model because not enough residual degrees of freedom, so does not give any p-adj values 
+model <- aov(percent ~ year*location, data= glm_percent)
+TukeyHSD(model)
 
-years1 <- c(2013, 2014, 2015, 2016, 2017) #naples and mohawk tukey test for each year ie. Mohawk 2013 - Naples 2013 
-p.value <- c(.0049236, 0, .0993233, .0080932, .632362)
-df <- data.frame(years1, p.value)
-ggplot(df, aes(x=years1, y=p.value)) +
-  geom_bar(position="dodge", stat="identity")
+#making new column in glm_data
+glm_percent$year.location <- paste(glm_percent$year,glm_percent$location)
+
+library(multcomp)
+glm5.av <- aov(neighbor ~ year.location, data = glm_data)
+TukeyHSD(glm5.av) 
+
+ggplot(glm_percent, aes(x=percent, y=year.location)) +
+  geom_bar(position="dodge", stat="identity") + geom_text(aes(label=c("*", "*", "*", "*", "", "","*","*","","")), hjust=-1, size=5) + xlab("Percent interaction") + ylab("Year and location") 
 
 ```
 
