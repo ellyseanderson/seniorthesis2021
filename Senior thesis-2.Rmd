@@ -465,7 +465,8 @@ pd <- position_dodge(0.9)
 
 #woohoo! now the data are ready to be plotted
 ggplot(glm_3, aes(x=year, y=percent, fill=location)) +
-  geom_bar(position="dodge", stat="identity") + ylab("Percent interaction")
+  geom_bar(position="dodge", stat="identity") + ylab("Percent interaction")+ geom_text(aes(label=c("*", "*", "*", "*", "", "","*","*","",""), position= "dodge"))
+
 
 #also, here's a nifty function to save ggplots!
 ggsave('figures/amelia-plot.png', width = 4, height = 2.5)
@@ -532,7 +533,13 @@ glm5.av <- aov(neighbor ~ year.location, data = glm_data)
 TukeyHSD(glm5.av) 
 
 ggplot(glm_percent, aes(x=percent, y=year.location, fill=year)) +
-  geom_bar(position="dodge", stat="identity") + geom_text(aes(label=c("*", "*", "*", "*", "", "","*","*","","")), hjust=-1, size=5) + xlab("Percent interaction") + ylab("Year and location")  
+  geom_bar(position="dodge", stat="identity") + geom_text(aes(label=c("*", "*", "*", "*", "", "","*","*","","")), hjust=-2, size=5) + xlab("Percent interaction") + ylab("Year and location")  
+
+
+ggplot(glm_percent, aes(x=year, y=percent, fill=location)) +
+  geom_bar(stat="identity", position = position_dodge()) + geom_text(aes(label=c("*", "*", "*", "*", "", "","*","*","","")), size=5, position = position_dodge(0.9)) + xlab("Year") + ylab("Percent interaction") + scale_fill_manual(values=c( "#E69F00", "#F8766D"))
+
+?position_dodge
 
 ```
 
