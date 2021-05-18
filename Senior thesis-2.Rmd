@@ -537,7 +537,7 @@ ggplot(glm_percent, aes(x=percent, y=year.location, fill=year)) +
 
 
 ggplot(glm_percent, aes(x=year, y=percent, fill=location)) +
-  geom_bar(stat="identity", position = position_dodge()) + geom_text(aes(label=c("*", "*", "*", "*", "", "","*","*","","")), size=5, position = position_dodge(0.9)) + xlab("Year") + ylab("Percent interaction") + scale_fill_manual(values=c( "#E69F00", "#F8766D"))
+  geom_bar(stat="identity", position = position_dodge()) + geom_text(aes(label=c("*", "*", "*", "*", "", "","*","*","","")), size=5, position = position_dodge(0.9), vjust=-.0009) + xlab("Year") + ylab("Percent interaction") + scale_fill_manual(values=c( "#FFC20A", "#0C7BDC"))
 
 ?position_dodge
 
