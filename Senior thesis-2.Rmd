@@ -543,3 +543,9 @@ ggplot(glm_percent, aes(x=year, y=percent, fill=location)) +
 
 ```
 
+```{r}
+#GLM for orientation
+glm7 <- glmer(neighbor ~ orientation + (1|filename), data=glm_data, family="binomial",  glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+summary(glm7)
+```
+
