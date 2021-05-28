@@ -16,6 +16,8 @@ library(dplyr)
 #read in data
 data <- read.csv("mohawk and naples data.csv")
 str(data)
+nrow(data)
+#View(data)
 #tidy data 
 data_tidy <- data %>%
   pivot_longer(`Neighbor.1`:`Neighbor.Extra`) %>% #make each neighbor observation a row
@@ -112,6 +114,7 @@ data_name$upwell <- data_name$dataset
 data_name$upwell[grep("May|June|July|Aug", data_name$upwell)] <- "yes"
 data_name$upwell[grep("Jan|Feb|Oct|Nov|Dec", data_name$upwell)] <- "no"
 #View(data_name)
+nrow(data_name)
 ```
 
 .....................................................................
@@ -537,7 +540,7 @@ ggplot(glm_percent, aes(x=percent, y=year.location, fill=year)) +
 
 
 ggplot(glm_percent, aes(x=year, y=percent, fill=location)) +
-  geom_bar(stat="identity", position = position_dodge()) + geom_text(aes(label=c("*", "*", "*", "*", "", "","*","*","","")), size=5, position = position_dodge(0.9), vjust=-.0009) + xlab("Year") + ylab("Percent interaction") + scale_fill_manual(values=c( "#FFC20A", "#0C7BDC"))
+  geom_bar(stat="identity", position = position_dodge()) + geom_text(aes(label=c("", "*", "", "*", "", "","","*","","")), size=8, position = position_dodge(0.9),vjust=-0.000001,  hjust=1.9) + xlab("Year") + ylab("Percent interaction") + scale_fill_manual(values=c( "#FFC20A", "#0C7BDC")) + expand_limits(y=c(0,0.1)) + theme_bw()
 
 ?position_dodge
 
